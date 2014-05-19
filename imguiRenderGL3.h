@@ -21,7 +21,10 @@
 #ifndef IMGUI_RENDER_GL_H
 #define IMGUI_RENDER_GL_H
 
-bool imguiRenderGLInit(const char* fontpath);
+#include <string>
+#include <yip-imports/resource_loader.h>
+
+bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath);
 void imguiRenderGLDestroy();
 void imguiRenderGLDraw(int width, int height);
 

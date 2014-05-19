@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "imguiRenderGL3.h"
 #include <yip-imports/gl.h>
 
 #include "imgui.h"
@@ -326,7 +327,7 @@ static void drawLine(float x0, float y0, float x1, float y1, float r, float fth,
 }
 
 
-bool imguiRenderGLInit(const char* fontpath)
+bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
 {
         for (int i = 0; i < CIRCLE_VERTS; ++i)
         {
@@ -336,31 +337,15 @@ bool imguiRenderGLInit(const char* fontpath)
         }
 
         // Load font.
-        FILE* fp = fopen(fontpath, "rb");
-        if (!fp) return false;
-        fseek(fp, 0, SEEK_END);
-        int size = (int)ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        
-        unsigned char* ttfBuffer = (unsigned char*)malloc(size); 
-        if (!ttfBuffer)
-        {
-                fclose(fp);
-                return false;
-        }
-        
-        fread(ttfBuffer, 1, size, fp);
-        fclose(fp);
-        fp = 0;
+        std::string ttfBuffer = loader.loadResource(fontpath);
         
         unsigned char* bmap = (unsigned char*)malloc(512*512);
         if (!bmap)
         {
-                free(ttfBuffer);
                 return false;
         }
         
-        stbtt_BakeFontBitmap(ttfBuffer,0, 15.0f, bmap,512,512, 32,96, g_cdata);
+        stbtt_BakeFontBitmap((const unsigned char *)ttfBuffer.data(),0, 15.0f, bmap,512,512, 32,96, g_cdata);
         
         // can free ttf_buffer at this point
         GL::genTextures(1, &g_ftex);
@@ -433,7 +418,6 @@ bool imguiRenderGLInit(const char* fontpath)
         GL::useProgram(0);
 
 
-        free(ttfBuffer);
         free(bmap);
 
         return true;
