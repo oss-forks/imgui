@@ -66,13 +66,13 @@ static void bindVertexArray()
 
         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
         GL::vertexAttribPointer(0, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, (void*)0);
-        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
+//        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
         GL::vertexAttribPointer(1, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, (void*)0);
-        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
+//        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
         GL::vertexAttribPointer(2, 4, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*4, (void*)0);
-        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
+//        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
 }
 
 static void drawPolygon(const float* coords, unsigned numCoords, float r, unsigned int col)
@@ -213,14 +213,17 @@ static void drawPolygon(const float* coords, unsigned numCoords, float r, unsign
         }        
         GL::bindTexture(GL::TEXTURE_2D, g_whitetex);
         
-        bindVertexArray();
         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
         GL::bufferData(GL::ARRAY_BUFFER, vSize*sizeof(float), v, GL::STATIC_DRAW);
         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
         GL::bufferData(GL::ARRAY_BUFFER, uvSize*sizeof(float), uv, GL::STATIC_DRAW);
         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
         GL::bufferData(GL::ARRAY_BUFFER, cSize*sizeof(float), c, GL::STATIC_DRAW);
+        bindVertexArray();
         GL::drawArrays(GL::TRIANGLES, 0, (numCoords * 2 + numCoords - 2)*3);
+        GL::disableVertexAttribArray(0);
+        GL::disableVertexAttribArray(1);
+        GL::disableVertexAttribArray(2);
  
 }
 
@@ -593,14 +596,17 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
                                         r, g, b, a,
                                         r, g, b, a,
                                       };
-                        bindVertexArray();
                         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
                         GL::bufferData(GL::ARRAY_BUFFER, 12*sizeof(float), v, GL::STATIC_DRAW);
                         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
                         GL::bufferData(GL::ARRAY_BUFFER, 12*sizeof(float), uv, GL::STATIC_DRAW);
                         GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
                         GL::bufferData(GL::ARRAY_BUFFER, 24*sizeof(float), c, GL::STATIC_DRAW);
+                        bindVertexArray();
                         GL::drawArrays(GL::TRIANGLES, 0, 6);
+                        GL::disableVertexAttribArray(0);
+                        GL::disableVertexAttribArray(1);
+                        GL::disableVertexAttribArray(2);
 
                 }
                 ++text;
