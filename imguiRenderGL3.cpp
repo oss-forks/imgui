@@ -380,7 +380,7 @@ bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
         "{\n"
         "    vertexColor = VertexColor;\n"
         "    texCoord = VertexTexCoord;\n"
-        "    gl_Position = vec4(VertexPosition * 2.0 / Viewport - 1.0, 0.f, 1.0);\n"
+        "    gl_Position = vec4(VertexPosition * 2.0 / Viewport - 1.0, 0.0, 1.0);\n"
         "}\n";
         GL::UInt vso = GL::createShader(GL::VERTEX_SHADER);
         GL::shaderSource(vso, 1, (const char **)  &vs, NULL);
@@ -407,7 +407,7 @@ bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
         "uniform sampler2D Texture;\n"
         "void main(void)\n"
         "{\n"
-        "    float alpha = texture(Texture, texCoord).r;\n"
+        "    float alpha = texture2D(Texture, texCoord).r;\n"
         "    gl_FragColor = vec4(vertexColor.rgb, vertexColor.a * alpha);\n"
         "}\n";
         GL::UInt fso = GL::createShader(GL::FRAGMENT_SHADER);
