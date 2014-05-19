@@ -48,7 +48,6 @@ static float g_circleVerts[CIRCLE_VERTS*2];
 static stbtt_bakedchar g_cdata[96]; // ASCII 32..126 is 95 glyphs
 static GL::UInt g_ftex = 0;
 static GL::UInt g_whitetex = 0;
-static GL::UInt g_vbos[3] = {0, 0, 0};
 static GL::UInt g_program = 0;
 static GL::UInt g_programViewportLocation = 0;
 static GL::UInt g_programTextureLocation = 0;
@@ -56,23 +55,6 @@ static GL::UInt g_programTextureLocation = 0;
 inline unsigned int RGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
         return (r) | (g << 8) | (b << 16) | (a << 24);
-}
-
-static void bindVertexArray()
-{
-        GL::enableVertexAttribArray(0);
-        GL::enableVertexAttribArray(1);
-        GL::enableVertexAttribArray(2);
-
-        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
-        GL::vertexAttribPointer(0, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, (void*)0);
-//        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
-        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
-        GL::vertexAttribPointer(1, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, (void*)0);
-//        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
-        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
-        GL::vertexAttribPointer(2, 4, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*4, (void*)0);
-//        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
 }
 
 static void drawPolygon(const float* coords, unsigned numCoords, float r, unsigned int col)
@@ -213,13 +195,12 @@ static void drawPolygon(const float* coords, unsigned numCoords, float r, unsign
         }        
         GL::bindTexture(GL::TEXTURE_2D, g_whitetex);
         
-        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
-        GL::bufferData(GL::ARRAY_BUFFER, vSize*sizeof(float), v, GL::STATIC_DRAW);
-        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
-        GL::bufferData(GL::ARRAY_BUFFER, uvSize*sizeof(float), uv, GL::STATIC_DRAW);
-        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
-        GL::bufferData(GL::ARRAY_BUFFER, cSize*sizeof(float), c, GL::STATIC_DRAW);
-        bindVertexArray();
+        GL::enableVertexAttribArray(0);
+        GL::enableVertexAttribArray(1);
+        GL::enableVertexAttribArray(2);
+        GL::vertexAttribPointer(0, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, v);
+        GL::vertexAttribPointer(1, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, uv);
+        GL::vertexAttribPointer(2, 4, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*4, c);
         GL::drawArrays(GL::TRIANGLES, 0, (numCoords * 2 + numCoords - 2)*3);
         GL::disableVertexAttribArray(0);
         GL::disableVertexAttribArray(1);
@@ -366,8 +347,6 @@ bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
         GL::texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR);
         GL::texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR);
 
-        GL::genBuffers(3, g_vbos);
-
         g_program = GL::createProgram();
         GL::Int logLength;
     
@@ -465,12 +444,6 @@ void imguiRenderGLDestroy()
         {
                 GL::deleteTextures(1, &g_ftex);
                 g_ftex = 0;
-        }
-
-        if (g_vbos[0])
-        {
-            GL::deleteBuffers(3, g_vbos);
-            g_vbos[0] = 0;
         }
 
         if (g_program)
@@ -596,13 +569,12 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
                                         r, g, b, a,
                                         r, g, b, a,
                                       };
-                        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
-                        GL::bufferData(GL::ARRAY_BUFFER, 12*sizeof(float), v, GL::STATIC_DRAW);
-                        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
-                        GL::bufferData(GL::ARRAY_BUFFER, 12*sizeof(float), uv, GL::STATIC_DRAW);
-                        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
-                        GL::bufferData(GL::ARRAY_BUFFER, 24*sizeof(float), c, GL::STATIC_DRAW);
-                        bindVertexArray();
+                        GL::enableVertexAttribArray(0);
+                        GL::enableVertexAttribArray(1);
+                        GL::enableVertexAttribArray(2);
+                        GL::vertexAttribPointer(0, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, v);
+                        GL::vertexAttribPointer(1, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, uv);
+                        GL::vertexAttribPointer(2, 4, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*4, c);
                         GL::drawArrays(GL::TRIANGLES, 0, 6);
                         GL::disableVertexAttribArray(0);
                         GL::disableVertexAttribArray(1);
