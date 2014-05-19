@@ -23,6 +23,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 
 #include "imguiRenderGL3.h"
 #include <yip-imports/gl.h>
@@ -365,6 +366,7 @@ bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
         GL::genBuffers(3, g_vbos);
 
         g_program = GL::createProgram();
+        GL::Int logLength;
     
         const char * vs =
 //        "#version 150\n"
@@ -382,7 +384,17 @@ bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
         "}\n";
         GL::UInt vso = GL::createShader(GL::VERTEX_SHADER);
         GL::shaderSource(vso, 1, (const char **)  &vs, NULL);
+
         GL::compileShader(vso);
+        logLength = 0;
+        GL::getShaderiv(vso, GL::INFO_LOG_LENGTH, &logLength);
+        if (logLength > 0)
+        {
+            std::vector<char> log(static_cast<size_t>(logLength + 1), 0);
+            GL::getShaderInfoLog(vso, logLength, nullptr, log.data());
+            std::clog << "Compiling imgui vertex shader: " << log.data() << std::endl;
+        }
+
         GL::attachShader(g_program, vso);
 
         const char * fs =
@@ -402,12 +414,33 @@ bool imguiRenderGLInit(Resource::Loader & loader, const std::string & fontpath)
 
         GL::shaderSource(fso, 1, (const char **) &fs, NULL);
         GL::compileShader(fso);
+
+        GL::compileShader(fso);
+        logLength = 0;
+        GL::getShaderiv(vso, GL::INFO_LOG_LENGTH, &logLength);
+        if (logLength > 0)
+        {
+            std::vector<char> log(static_cast<size_t>(logLength + 1), 0);
+            GL::getShaderInfoLog(fso, logLength, nullptr, log.data());
+            std::clog << "Compiling imgui fragment shader: " << log.data() << std::endl;
+        }
+
         GL::attachShader(g_program, fso);
 
         GL::bindAttribLocation(g_program,  0,  "VertexPosition");
         GL::bindAttribLocation(g_program,  1,  "VertexTexCoord");
         GL::bindAttribLocation(g_program,  2,  "VertexColor");
+
         GL::linkProgram(g_program);
+        logLength = 0;
+        GL::getProgramiv(g_program, GL::INFO_LOG_LENGTH, &logLength);
+        if (logLength > 0)
+        {
+            std::vector<char> log(static_cast<size_t>(logLength + 1), 0);
+            GL::getProgramInfoLog(g_program, logLength, nullptr, log.data());
+            std::clog << "Linking imgui program:\n" << log.data() << std::endl;
+        }
+
         GL::deleteShader(vso);
         GL::deleteShader(fso);
 
