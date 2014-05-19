@@ -522,6 +522,9 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
         float a = (float) ((col>>24)&0xff) / 255.f;
 
         // assume orthographic projection with units = screen pixels, origin at top left
+        GL::enableVertexAttribArray(0);
+        GL::enableVertexAttribArray(1);
+        GL::enableVertexAttribArray(2);
         GL::bindTexture(GL::TEXTURE_2D, g_ftex);
         
         const float ox = x;
@@ -569,16 +572,10 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
                                         r, g, b, a,
                                         r, g, b, a,
                                       };
-                        GL::enableVertexAttribArray(0);
-                        GL::enableVertexAttribArray(1);
-                        GL::enableVertexAttribArray(2);
                         GL::vertexAttribPointer(0, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, v);
                         GL::vertexAttribPointer(1, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, uv);
                         GL::vertexAttribPointer(2, 4, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*4, c);
                         GL::drawArrays(GL::TRIANGLES, 0, 6);
-                        GL::disableVertexAttribArray(0);
-                        GL::disableVertexAttribArray(1);
-                        GL::disableVertexAttribArray(2);
 
                 }
                 ++text;
@@ -586,6 +583,9 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
         
         //glEnd();        
         //glDisable(GL::TEXTURE_2D);
+        GL::disableVertexAttribArray(0);
+        GL::disableVertexAttribArray(1);
+        GL::disableVertexAttribArray(2);
 }
 
 
@@ -602,6 +602,9 @@ void imguiRenderGLDraw(int width, int height)
         GL::uniform2f(g_programViewportLocation, (float) width, (float) height);
         GL::uniform1i(g_programTextureLocation, 0);
 
+        GL::enable(GL::BLEND);
+        GL::blendFunc(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
+        GL::disable(GL::DEPTH_TEST);
 
         GL::disable(GL::SCISSOR_TEST);
         for (int i = 0; i < nq; ++i)
