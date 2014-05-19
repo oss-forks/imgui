@@ -21,37 +21,17 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <stdlib.h>
 #include <stdio.h>
 
-#include "glew/glew.h"
-#ifdef __APPLE__
-#include <OpenGL/gl3.h>
-#else
-#include <GL/gl.h>
-#endif
+#include <yip-imports/gl.h>
 
 #include "imgui.h"
 
 // Some math headers don't have PI defined.
 static const float PI = 3.14159265f;
 
-void imguifree(void* ptr, void* userptr);
-void* imguimalloc(size_t size, void* userptr);
-
-#define STBTT_malloc(x,y)    imguimalloc(x,y)
-#define STBTT_free(x,y)      imguifree(x,y)
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
-
-void imguifree(void* ptr, void* /*userptr*/)
-{
-        free(ptr);
-}
-
-void* imguimalloc(size_t size, void* /*userptr*/)
-{
-        return malloc(size);
-}
+#include <yip-imports/stb_truetype.h>
 
 static const unsigned TEMP_COORD_COUNT = 100;
 static float g_tempCoords[TEMP_COORD_COUNT*2];
@@ -64,17 +44,33 @@ static const int CIRCLE_VERTS = 8*4;
 static float g_circleVerts[CIRCLE_VERTS*2];
 
 static stbtt_bakedchar g_cdata[96]; // ASCII 32..126 is 95 glyphs
-static GLuint g_ftex = 0;
-static GLuint g_whitetex = 0;
-static GLuint g_vao = 0;
-static GLuint g_vbos[3] = {0, 0, 0};
-static GLuint g_program = 0;
-static GLuint g_programViewportLocation = 0;
-static GLuint g_programTextureLocation = 0;
+static GL::UInt g_ftex = 0;
+static GL::UInt g_whitetex = 0;
+static GL::UInt g_vbos[3] = {0, 0, 0};
+static GL::UInt g_program = 0;
+static GL::UInt g_programViewportLocation = 0;
+static GL::UInt g_programTextureLocation = 0;
 
 inline unsigned int RGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
         return (r) | (g << 8) | (b << 16) | (a << 24);
+}
+
+static void bindVertexArray()
+{
+        GL::enableVertexAttribArray(0);
+        GL::enableVertexAttribArray(1);
+        GL::enableVertexAttribArray(2);
+
+        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
+        GL::vertexAttribPointer(0, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, (void*)0);
+        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
+        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
+        GL::vertexAttribPointer(1, 2, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*2, (void*)0);
+        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
+        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
+        GL::vertexAttribPointer(2, 4, GL::FLOAT, GL::FALSE, sizeof(GL::FLOAT)*4, (void*)0);
+        GL::bufferData(GL::ARRAY_BUFFER, 0, 0, GL::STATIC_DRAW);
 }
 
 static void drawPolygon(const float* coords, unsigned numCoords, float r, unsigned int col)
@@ -213,16 +209,16 @@ static void drawPolygon(const float* coords, unsigned numCoords, float r, unsign
             *(ptrC+3) = colf[3];
             ptrC += 4;          
         }        
-        glBindTexture(GL_TEXTURE_2D, g_whitetex);
+        GL::bindTexture(GL::TEXTURE_2D, g_whitetex);
         
-        glBindVertexArray(g_vao);
-        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
-        glBufferData(GL_ARRAY_BUFFER, vSize*sizeof(float), v, GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
-        glBufferData(GL_ARRAY_BUFFER, uvSize*sizeof(float), uv, GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
-        glBufferData(GL_ARRAY_BUFFER, cSize*sizeof(float), c, GL_STATIC_DRAW);
-        glDrawArrays(GL_TRIANGLES, 0, (numCoords * 2 + numCoords - 2)*3);
+        bindVertexArray();
+        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
+        GL::bufferData(GL::ARRAY_BUFFER, vSize*sizeof(float), v, GL::STATIC_DRAW);
+        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
+        GL::bufferData(GL::ARRAY_BUFFER, uvSize*sizeof(float), uv, GL::STATIC_DRAW);
+        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
+        GL::bufferData(GL::ARRAY_BUFFER, cSize*sizeof(float), c, GL::STATIC_DRAW);
+        GL::drawArrays(GL::TRIANGLES, 0, (numCoords * 2 + numCoords - 2)*3);
  
 }
 
@@ -343,7 +339,7 @@ bool imguiRenderGLInit(const char* fontpath)
         FILE* fp = fopen(fontpath, "rb");
         if (!fp) return false;
         fseek(fp, 0, SEEK_END);
-        int size = ftell(fp);
+        int size = (int)ftell(fp);
         fseek(fp, 0, SEEK_SET);
         
         unsigned char* ttfBuffer = (unsigned char*)malloc(size); 
@@ -367,88 +363,74 @@ bool imguiRenderGLInit(const char* fontpath)
         stbtt_BakeFontBitmap(ttfBuffer,0, 15.0f, bmap,512,512, 32,96, g_cdata);
         
         // can free ttf_buffer at this point
-        glGenTextures(1, &g_ftex);
-        glBindTexture(GL_TEXTURE_2D, g_ftex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512,512, 0, GL_RED, GL_UNSIGNED_BYTE, bmap);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        GL::genTextures(1, &g_ftex);
+        GL::bindTexture(GL::TEXTURE_2D, g_ftex);
+        GL::texImage2D(GL::TEXTURE_2D, 0, GL::LUMINANCE, 512,512, 0, GL::LUMINANCE, GL::UNSIGNED_BYTE, bmap);
+        GL::texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR);
+        GL::texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR);
 
         // can free ttf_buffer at this point
         unsigned char white_alpha = 255;
-        glGenTextures(1, &g_whitetex);
-        glBindTexture(GL_TEXTURE_2D, g_whitetex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &white_alpha);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        GL::genTextures(1, &g_whitetex);
+        GL::bindTexture(GL::TEXTURE_2D, g_whitetex);
+        GL::texImage2D(GL::TEXTURE_2D, 0, GL::LUMINANCE, 1, 1, 0, GL::LUMINANCE, GL::UNSIGNED_BYTE, &white_alpha);
+        GL::texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR);
+        GL::texParameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR);
 
-        glGenVertexArrays(1, &g_vao);
-        glGenBuffers(3, g_vbos);
+        GL::genBuffers(3, g_vbos);
 
-        glBindVertexArray(g_vao);
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(2);
-
-        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
-        glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
-        glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
-        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*4, (void*)0);
-        glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
-        g_program = glCreateProgram();
+        g_program = GL::createProgram();
     
         const char * vs =
-        "#version 150\n"
+//        "#version 150\n"
         "uniform vec2 Viewport;\n"
-        "in vec2 VertexPosition;\n"
-        "in vec2 VertexTexCoord;\n"
-        "in vec4 VertexColor;\n"
-        "out vec2 texCoord;\n"
-        "out vec4 vertexColor;\n"
+        "attribute vec2 VertexPosition;\n"
+        "attribute vec2 VertexTexCoord;\n"
+        "attribute vec4 VertexColor;\n"
+        "varying vec2 texCoord;\n"
+        "varying vec4 vertexColor;\n"
         "void main(void)\n"
         "{\n"
         "    vertexColor = VertexColor;\n"
         "    texCoord = VertexTexCoord;\n"
         "    gl_Position = vec4(VertexPosition * 2.0 / Viewport - 1.0, 0.f, 1.0);\n"
         "}\n";
-        GLuint vso = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vso, 1, (const char **)  &vs, NULL);
-        glCompileShader(vso);
-        glAttachShader(g_program, vso);
+        GL::UInt vso = GL::createShader(GL::VERTEX_SHADER);
+        GL::shaderSource(vso, 1, (const char **)  &vs, NULL);
+        GL::compileShader(vso);
+        GL::attachShader(g_program, vso);
 
         const char * fs =
-        "#version 150\n"
-        "in vec2 texCoord;\n"
-        "in vec4 vertexColor;\n"
+//        "#version 150\n"
+        "#ifdef GL_ES\n"
+        "precision mediump float;\n"
+        "#endif\n"
+        "varying vec2 texCoord;\n"
+        "varying vec4 vertexColor;\n"
         "uniform sampler2D Texture;\n"
-        "out vec4  Color;\n"
         "void main(void)\n"
         "{\n"
         "    float alpha = texture(Texture, texCoord).r;\n"
-        "    Color = vec4(vertexColor.rgb, vertexColor.a * alpha);\n"
+        "    gl_FragColor = vec4(vertexColor.rgb, vertexColor.a * alpha);\n"
         "}\n";
-        GLuint fso = glCreateShader(GL_FRAGMENT_SHADER);
+        GL::UInt fso = GL::createShader(GL::FRAGMENT_SHADER);
 
-        glShaderSource(fso, 1, (const char **) &fs, NULL);
-        glCompileShader(fso);
-        glAttachShader(g_program, fso);
+        GL::shaderSource(fso, 1, (const char **) &fs, NULL);
+        GL::compileShader(fso);
+        GL::attachShader(g_program, fso);
 
-        glBindAttribLocation(g_program,  0,  "VertexPosition");
-        glBindAttribLocation(g_program,  1,  "VertexTexCoord");
-        glBindAttribLocation(g_program,  2,  "VertexColor");
-        glBindFragDataLocation(g_program, 0, "Color");
-        glLinkProgram(g_program);
-        glDeleteShader(vso);
-        glDeleteShader(fso);
+        GL::bindAttribLocation(g_program,  0,  "VertexPosition");
+        GL::bindAttribLocation(g_program,  1,  "VertexTexCoord");
+        GL::bindAttribLocation(g_program,  2,  "VertexColor");
+        GL::linkProgram(g_program);
+        GL::deleteShader(vso);
+        GL::deleteShader(fso);
 
-        glUseProgram(g_program);
-        g_programViewportLocation = glGetUniformLocation(g_program, "Viewport");
-        g_programTextureLocation = glGetUniformLocation(g_program, "Texture");
+        GL::useProgram(g_program);
+        g_programViewportLocation = GL::getUniformLocation(g_program, "Viewport");
+        g_programTextureLocation = GL::getUniformLocation(g_program, "Texture");
 
-        glUseProgram(0);
+        GL::useProgram(0);
 
 
         free(ttfBuffer);
@@ -461,20 +443,19 @@ void imguiRenderGLDestroy()
 {
         if (g_ftex)
         {
-                glDeleteTextures(1, &g_ftex);
+                GL::deleteTextures(1, &g_ftex);
                 g_ftex = 0;
         }
 
-        if (g_vao)
+        if (g_vbos[0])
         {
-            glDeleteVertexArrays(1, &g_vao);
-            glDeleteBuffers(3, g_vbos);
-            g_vao = 0;
+            GL::deleteBuffers(3, g_vbos);
+            g_vbos[0] = 0;
         }
 
         if (g_program)
         {
-            glDeleteProgram(g_program);
+            GL::deleteProgram(g_program);
             g_program = 0;
         }
 
@@ -484,8 +465,8 @@ static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_ind
                                                  float *xpos, float *ypos, stbtt_aligned_quad *q)
 {
         stbtt_bakedchar *b = chardata + char_index;
-        int round_x = STBTT_ifloor(*xpos + b->xoff);
-        int round_y = STBTT_ifloor(*ypos - b->yoff);
+        int round_x = (int)floor(*xpos + b->xoff);
+        int round_y = (int)floor(*ypos - b->yoff);
         
         q->x0 = (float)round_x;
         q->y0 = (float)round_y;
@@ -523,7 +504,7 @@ static float getTextLength(stbtt_bakedchar *chardata, const char* text)
                 else if (c >= 32 && c < 128)
                 {
                         stbtt_bakedchar *b = chardata + c-32;
-                        int round_x = STBTT_ifloor((xpos + b->xoff) + 0.5);
+                        int round_x = (int)floor((xpos + b->xoff) + 0.5);
                         len = round_x + b->x1 - b->x0 + 0.5f;
                         xpos += b->xadvance;
                 }
@@ -548,7 +529,7 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
         float a = (float) ((col>>24)&0xff) / 255.f;
 
         // assume orthographic projection with units = screen pixels, origin at top left
-        glBindTexture(GL_TEXTURE_2D, g_ftex);
+        GL::bindTexture(GL::TEXTURE_2D, g_ftex);
         
         const float ox = x;
         
@@ -595,21 +576,21 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
                                         r, g, b, a,
                                         r, g, b, a,
                                       };
-                        glBindVertexArray(g_vao);
-                        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
-                        glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), v, GL_STATIC_DRAW);
-                        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
-                        glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), uv, GL_STATIC_DRAW);
-                        glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
-                        glBufferData(GL_ARRAY_BUFFER, 24*sizeof(float), c, GL_STATIC_DRAW);
-                        glDrawArrays(GL_TRIANGLES, 0, 6);
+                        bindVertexArray();
+                        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[0]);
+                        GL::bufferData(GL::ARRAY_BUFFER, 12*sizeof(float), v, GL::STATIC_DRAW);
+                        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[1]);
+                        GL::bufferData(GL::ARRAY_BUFFER, 12*sizeof(float), uv, GL::STATIC_DRAW);
+                        GL::bindBuffer(GL::ARRAY_BUFFER, g_vbos[2]);
+                        GL::bufferData(GL::ARRAY_BUFFER, 24*sizeof(float), c, GL::STATIC_DRAW);
+                        GL::drawArrays(GL::TRIANGLES, 0, 6);
 
                 }
                 ++text;
         }
         
         //glEnd();        
-        //glDisable(GL_TEXTURE_2D);
+        //glDisable(GL::TEXTURE_2D);
 }
 
 
@@ -620,14 +601,14 @@ void imguiRenderGLDraw(int width, int height)
 
         const float s = 1.0f/8.0f;
 
-        glViewport(0, 0, width, height);
-        glUseProgram(g_program);
-	glActiveTexture(GL_TEXTURE0);
-        glUniform2f(g_programViewportLocation, (float) width, (float) height);
-        glUniform1i(g_programTextureLocation, 0);
+        GL::viewport(0, 0, width, height);
+        GL::useProgram(g_program);
+	GL::activeTexture(GL::TEXTURE0);
+        GL::uniform2f(g_programViewportLocation, (float) width, (float) height);
+        GL::uniform1i(g_programTextureLocation, 0);
 
 
-        glDisable(GL_SCISSOR_TEST);
+        GL::disable(GL::SCISSOR_TEST);
         for (int i = 0; i < nq; ++i)
         {
                 const imguiGfxCmd& cmd = q[i];
@@ -681,14 +662,14 @@ void imguiRenderGLDraw(int width, int height)
                 {
                         if (cmd.flags)
                         {
-                                glEnable(GL_SCISSOR_TEST);
-                                glScissor(cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h);
+                                GL::enable(GL::SCISSOR_TEST);
+                                GL::scissor(cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h);
                         }
                         else
                         {
-                                glDisable(GL_SCISSOR_TEST);
+                                GL::disable(GL::SCISSOR_TEST);
                         }
                 }
         }
-        glDisable(GL_SCISSOR_TEST);
+        GL::disable(GL::SCISSOR_TEST);
 }

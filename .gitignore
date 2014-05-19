@@ -1,5 +1,1 @@
-obj/
-Makefile
-*.make
-*.a
-sample_*
+/.yip
